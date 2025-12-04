@@ -46,7 +46,7 @@ class IsotropicMaterial:
     _mapdl_id: int = field(init=False, default=-1)
 
     def register(self, mapdl) -> int:
-        self._mapdl_id = mapdl.get("MID", "", "NEXT") or 1
+        self._mapdl_id = mapdl.get("MID", "", "NEXT", ignore_errors=True) or 1
         mapdl.mp("EX", self._mapdl_id, self.ex)
         mapdl.mp("PRXY", self._mapdl_id, self.nu)
         mapdl.mp("ALPX", self._mapdl_id, self.cte)
@@ -75,7 +75,7 @@ class OrthotropicMaterial:
     _mapdl_id: int = field(init=False, default=-1)
 
     def register(self, mapdl) -> int:
-        self._mapdl_id = mapdl.get("MID", "", "NEXT") or 1
+        self._mapdl_id = mapdl.get("MID", "", "NEXT", ignore_errors=True) or 1
         mapdl.mp("EX", self._mapdl_id, self.ex)
         mapdl.mp("EY", self._mapdl_id, self.ey)
         mapdl.mp("EZ", self._mapdl_id, self.ez)
@@ -227,7 +227,7 @@ def _solve_cte(mapdl, cube_edge: float, delta_t: float = 1.0) -> Dict[str, float
     ctes = {}
     for axis, comp in ("X", "UX"), ("Y", "UY"), ("Z", "UZ"):
         mapdl.nsel("S", "LOC", axis, cube_edge)
-        disp = float(mapdl.get("_CTE", "NODE", 0, "U", comp[-1]))
+        disp = float(mapdl.get("_CTE", "NODE", 0, "U", comp[-1], ignore_errors=True))
         ctes[f"CTE{axis}"] = disp / (cube_edge * delta_t)
     mapdl.allsel()
     return ctes
@@ -274,7 +274,9 @@ def compute_effective_properties() -> Dict[str, float]:
             mapdl.post1()
             mapdl.set(1)
             mapdl.nsel("S", "LOC", primary, CUBE_EDGE)
-            lateral_disp = float(mapdl.get("_POIS", "NODE", 0, "U", comp[-1]))
+            lateral_disp = float(
+                mapdl.get("_POIS", "NODE", 0, "U", comp[-1], ignore_errors=True)
+            )
             return -(lateral_disp / CUBE_EDGE) / (disp / CUBE_EDGE)
 
         vxy = _poisson("X", "Y", 1e-3)
